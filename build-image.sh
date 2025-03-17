@@ -8,6 +8,10 @@ IMAGE_TAG="latest"
 export DOCKER_BUILDKIT=1
 
 echo "===== 开始构建 $IMAGE_NAME:$IMAGE_TAG 镜像 ====="
+echo "构建可能需要一些时间，请耐心等待..."
+
+# 创建临时目录用于构建缓存
+mkdir -p .docker-cache
 
 # 使用buildx构建多架构镜像
 docker buildx create --name multiarch-builder --use || true
@@ -18,6 +22,9 @@ echo "构建AMD64架构镜像..."
 docker buildx build --platform linux/amd64 \
   --tag $IMAGE_NAME:$IMAGE_TAG \
   --load \
+  --cache-from type=local,src=.docker-cache \
+  --cache-to type=local,dest=.docker-cache,mode=max \
+  --progress=plain \
   -f Dockerfile .
 
 echo "===== 镜像构建完成 ====="

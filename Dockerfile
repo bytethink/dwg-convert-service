@@ -1,39 +1,42 @@
 FROM --platform=linux/amd64 ubuntu:22.04 AS build
 
+# 设置环境变量以避免交互式提示
+ENV DEBIAN_FRONTEND=noninteractive
+
 # 安装基本工具和Java
 RUN apt-get update && apt-get install -y \
     openjdk-11-jdk \
     maven \
-    git \
-    build-essential \
-    autoconf \
-    libtool \
-    pkg-config \
-    texinfo \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# 下载预编译的LibreDWG二进制文件
+WORKDIR /tmp
+RUN apt-get update && apt-get install -y \
     libxml2-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 克隆并编译LibreDWG
-WORKDIR /tmp
-RUN git clone https://github.com/LibreDWG/libredwg.git \
-    && cd libredwg \
-    && ./autogen.sh \
-    && ./configure \
-    && make \
-    && make install \
-    && ldconfig
+# 下载并安装预编译的LibreDWG
+RUN mkdir -p /usr/local/lib && \
+    wget -q https://github.com/LibreDWG/libredwg/releases/download/0.13.3.7539/libredwg-0.13.3.7539.tar.xz -O libredwg.tar.gz && \
+    tar -xzf libredwg.tar.gz -C /usr/local && \
+    rm libredwg.tar.gz && \
+    ldconfig
+
+# 先复制pom.xml以利用Maven缓存
+WORKDIR /app
+COPY pom.xml .
+RUN mvn dependency:go-offline
 
 # 构建阶段 - 编译Java应用
-WORKDIR /app
-COPY . .
-RUN mvn clean package -DskipTests
+COPY src ./src
+RUN mvn package -DskipTests
 
-# 运行阶段
-FROM --platform=linux/amd64 ubuntu:22.04
+# 运行阶段 - 使用更小的基础镜像
+FROM --platform=linux/amd64 eclipse-temurin:11-jre
 
-# 安装Java运行时和LibreDWG依赖
+# 安装LibreDWG运行时依赖
 RUN apt-get update && apt-get install -y \
-    openjdk-11-jre \
     libxml2 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -52,4 +55,4 @@ COPY --from=build /app/target/dwg-convert-service-*.jar app.jar
 EXPOSE 8080
 
 # 启动应用
-ENTRYPOINT ["java", "-jar", "app.jar"] 
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"] 

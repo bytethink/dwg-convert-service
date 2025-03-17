@@ -7,6 +7,10 @@ services:
       dockerfile: Dockerfile
       args:
         - BUILDPLATFORM=linux/amd64
+      cache_from:
+        - type=local,src=.docker-cache
+      cache_to:
+        - type=local,dest=.docker-cache,mode=max
     image: dwg-convert-service:latest
     platform: linux/amd64
     ports:
@@ -16,4 +20,10 @@ services:
     restart: unless-stopped
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - JAVA_OPTS=-Xmx512m 
+      - JAVA_OPTS=-Xmx512m
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s 
