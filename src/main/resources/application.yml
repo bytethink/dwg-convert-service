@@ -1,0 +1,18 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  tomcat:
+    max-swallow-size: -1
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    cn.bytethink.dwgconvertservice: DEBUG 

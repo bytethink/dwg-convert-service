@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  dwg-convert-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - BUILDPLATFORM=linux/amd64
+    image: dwg-convert-service:latest
+    platform: linux/amd64
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./tmp:/tmp
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx512m 
